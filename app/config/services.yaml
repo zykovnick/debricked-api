@@ -1,0 +1,61 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+  app.debrickedApiVersion: '1.0'
+  app.debrickedLoginURL: 'https://debricked.com/api/login_check'
+  app.debrickedStatusUrl: 'https://debricked.com/api/%app.debrickedApiVersion%/open/ci/upload/status?ciUploadId=%s'
+  app.debrickedUploadUrl: 'https://debricked.com/api/%app.debrickedApiVersion%/open/uploads/dependencies/files'
+  app.debrickedUsername: '%env(DEBRICKED_USERNAME)%'
+  app.debrickedPassword: '%env(DEBRICKED_PASSWORD)%'
+
+  app.notificationSettings.rules:
+    triggerVulnAmount: 1
+    uploadInProgress: false
+    uploadFailed: false
+  app.notificationSettings.channels:
+    - 'email'
+    - 'slack'
+
+services:
+  # default configuration for services in *this* file
+  _defaults:
+    autowire: true      # Automatically injects dependencies in your services.
+    autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+  # makes classes in src/ available to be used as services
+  # this creates a service per class whose id is the fully-qualified class name
+  App\:
+    resource: '../src/'
+    exclude:
+      - '../src/DependencyInjection/'
+      - '../src/Entity/'
+      - '../src/Kernel.php'
+      - '../src/Tests/'
+
+  App\Service\FileUploader:
+    arguments:
+      $debrickedUploadUrl: '%app.debrickedUploadUrl%'
+
+  App\Service\FilePinger:
+    arguments:
+      $debrickedStatusUrl: '%app.debrickedStatusUrl%'
+
+  App\Service\TokenProvider:
+    arguments:
+      $debrickedUsername: '%app.debrickedUsername%'
+      $debrickedPassword: '%app.debrickedPassword%'
+      $debrickedLoginURL: '%app.debrickedLoginURL%'
+
+  App\Service\FileStatusProcessor:
+    arguments:
+      $notificationSettings: '%app.notificationSettings.rules%'
+
+  App\Service\NotificationProcessor:
+    arguments:
+      $channels: '%app.notificationSettings.channels%'
+
+  # add more service definitions when explicit configuration is needed
+  # please note that last definitions always *replace* previous ones
